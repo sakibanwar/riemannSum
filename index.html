@@ -166,6 +166,7 @@
             yMax: 20, 
             color: '#4F46E5', 
             name: 'f(x) = x²',
+            label: 'f(x) = x²',
             baseline: 0
         },
         'cubic': {
@@ -177,6 +178,7 @@
             yMax: 8,
             color: '#0EA5E9', 
             name: 'Cubic',
+            label: 'f(x) = -0.5(x - 2)³ + 2',
             baseline: 0
         },
         'root': {
@@ -188,6 +190,7 @@
             yMax: 8,
             color: '#10B981', 
             name: 'f(x) = 2√x',
+            label: 'f(x) = 2√x',
             baseline: 0
         },
         'consumer': {
@@ -199,6 +202,7 @@
             yMax: 12,
             color: '#EF4444', 
             name: 'Demand Curve',
+            label: 'Demand: P = 10 - 0.2x²',
             isEcon: true,
             price: 5,
             fillColor: '#FEE2E2', 
@@ -213,6 +217,7 @@
             yMax: 12,
             color: '#F59E0B', 
             name: 'Supply Curve',
+            label: 'Supply: P = 0.2x²',
             isEcon: true,
             price: 5,
             fillColor: '#FEF3C7', 
@@ -271,6 +276,13 @@
 
         // Clear
         ctx.clearRect(0, 0, width, height);
+
+        // --- TITLE ---
+        ctx.fillStyle = '#1e293b'; // Slate 800
+        ctx.font = 'bold 18px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(currentFunc.label, width / 2, 10);
 
         // --- GRID & AXES ---
         ctx.strokeStyle = '#e2e8f0';
