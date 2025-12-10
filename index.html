@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Riemann Sum Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        canvas { touch-action: none; }
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4F46E5;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center p-4">
+
+    <!-- Header -->
+    <header class="w-full max-w-5xl mb-6 text-center">
+        <h1 class="text-3xl font-bold text-slate-900 mb-2">Riemann Sum Visualizer</h1>
+        <p class="text-slate-600">Explore how rectangular approximation approaches the exact area.</p>
+    </header>
+
+    <!-- Main Control Panel & Canvas -->
+    <main class="w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden lg:flex lg:flex-row">
+        
+        <!-- Controls Sidebar -->
+        <div class="p-6 lg:w-1/3 bg-slate-100 border-r border-slate-200 flex flex-col gap-6">
+            
+            <!-- Function Selection -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Select Function</label>
+                <select id="funcSelect" class="w-full p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                    <option value="x2">f(x) = x² (Parabola)</option>
+                    <option value="cubic">f(x) = -0.5(x-2)³ + 2 (Cubic)</option>
+                    <option value="root">f(x) = 2√x (Square Root)</option>
+                    <option value="consumer">Consumer Surplus (Demand: P = 10 - 0.2x²)</option>
+                    <option value="producer">Producer Surplus (Supply: P = 0.2x²)</option>
+                </select>
+            </div>
+
+            <!-- Sum Method Selection -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Approximation Method</label>
+                <div class="flex gap-2">
+                    <button class="method-btn flex-1 py-2 px-3 text-xs font-medium rounded-md bg-white border border-slate-300 hover:bg-indigo-50 active-method" data-method="left">Left</button>
+                    <button class="method-btn flex-1 py-2 px-3 text-xs font-medium rounded-md bg-white border border-slate-300 hover:bg-indigo-50" data-method="middle">Mid</button>
+                    <button class="method-btn flex-1 py-2 px-3 text-xs font-medium rounded-md bg-white border border-slate-300 hover:bg-indigo-50" data-method="right">Right</button>
+                </div>
+            </div>
+
+            <!-- Slider Control -->
+            <div>
+                <div class="flex justify-between mb-2">
+                    <label class="text-sm font-semibold text-slate-700">Rectangles (n)</label>
+                    <span id="nValue" class="text-sm font-mono font-bold text-indigo-600">4</span>
+                </div>
+                <input type="range" id="nSlider" min="1" max="200" value="4" class="slider-thumb w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <!-- Animation Controls -->
+            <button id="playBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow transition flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                </svg>
+                Take to Limit (Animate)
+            </button>
+
+            <!-- Stats Box -->
+            <div class="mt-auto bg-white p-4 rounded-lg border border-slate-200">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-sm text-slate-500">Approx Area:</span>
+                    <span id="approxArea" class="font-mono font-bold text-lg text-indigo-600">0.000</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-slate-500">Exact Integral:</span>
+                    <span id="exactArea" class="font-mono font-semibold text-slate-800">0.000</span>
+                </div>
+                <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-100">
+                    <span class="text-xs text-slate-400">Error:</span>
+                    <span id="errorVal" class="font-mono text-xs text-red-500">0.000</span>
+                </div>
+            </div>
+            
+            <div id="econNote" class="hidden text-xs text-slate-600 bg-yellow-50 p-2 rounded border border-yellow-200">
+                <strong class="text-yellow-700">Economics Mode:</strong>
+                <ul class="list-disc ml-4 mt-1 space-y-1">
+                    <li><span class="font-semibold text-slate-800">Price Line:</span> Fixed at P = 5</li>
+                    <li><span class="font-semibold text-slate-800">Surplus:</span> Area between the curve and the Price line.</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="lg:w-2/3 bg-white relative">
+            <canvas id="graphCanvas" class="w-full h-[400px] lg:h-full block"></canvas>
+            <!-- Axis Labels -->
+            <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-md text-xs text-slate-500 border shadow-sm pointer-events-none">
+                Quantity (x)
+            </div>
+            <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-md text-xs text-slate-500 border shadow-sm pointer-events-none">
+                Price / f(x)
+            </div>
+            <!-- Legend (Dynamic) -->
+            <div id="legendContainer" class="absolute top-4 right-4 flex flex-col gap-2 pointer-events-none">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+    </main>
+
+<script>
+    // --- Configuration & State ---
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const state = {
+        n: 4,
+        method: 'left', // left, right, middle
+        funcKey: 'x2',
+        isAnimating: false,
+        animationId: null
+    };
+
+    // Define Functions and their properties
+    const functions = {
+        'x2': {
+            f: x => x * x,
+            integral: x => (x * x * x) / 3, // Int(x^2) = x^3/3
+            start: 0,
+            end: 4,
+            yMax: 18,
+            color: '#4F46E5', // Indigo
+            name: 'f(x) = x²',
+            baseline: 0
+        },
+        'cubic': {
+            f: x => -0.5 * Math.pow(x - 2, 3) + 2,
+            integral: x => -0.125 * Math.pow(x - 2, 4) + 2 * x,
+            start: 0,
+            end: 4,
+            yMax: 7,
+            color: '#0EA5E9', // Sky
+            name: 'Cubic',
+            baseline: 0
+        },
+        'root': {
+            f: x => 2 * Math.sqrt(x),
+            // Int(2*x^0.5) = 2 * (x^1.5 / 1.5) = (4/3) * x^1.5
+            integral: x => (4/3) * Math.pow(x, 1.5),
+            start: 0,
+            end: 9,
+            yMax: 7,
+            color: '#10B981', // Emerald
+            name: 'f(x) = 2√x',
+            baseline: 0
+        },
+        'consumer': {
+            // Demand: P = 10 - 0.2x^2. Price = 5.
+            f: x => 10 - 0.2 * x * x,
+            // Surplus = Int(Curve - Price) = Int(10 - 0.2x^2 - 5) = Int(5 - 0.2x^2)
+            // = 5x - (0.2 * x^3 / 3)
+            integral: x => 5 * x - (0.2 * Math.pow(x, 3) / 3),
+            start: 0,
+            end: 5, // Intersects P=5 at x=5
+            yMax: 12,
+            color: '#EF4444', // Red
+            name: 'Demand Curve',
+            isEcon: true,
+            price: 5,
+            fillColor: '#FEE2E2', // Light Red
+            rectType: 'below_curve_above_price'
+        },
+        'producer': {
+            // Supply: P = 0.2x^2. Price = 5.
+            f: x => 0.2 * x * x,
+            // Surplus = Int(Price - Curve) = Int(5 - 0.2x^2)
+            // = 5x - (0.2 * x^3 / 3)
+            integral: x => 5 * x - (0.2 * Math.pow(x, 3) / 3),
+            start: 0,
+            end: 5, // Intersects P=5 at x=5
+            yMax: 12,
+            color: '#F59E0B', // Amber
+            name: 'Supply Curve',
+            isEcon: true,
+            price: 5,
+            fillColor: '#FEF3C7', // Light Amber
+            rectType: 'above_curve_below_price'
+        }
+    };
+
+    // --- Drawing Engine ---
+
+    function resizeCanvas() {
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth * window.devicePixelRatio;
+        canvas.height = parent.clientHeight * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        draw();
+    }
+
+    // Coordinate Mapping
+    function mapX(x, width, xMin, xMax) {
+        const padding = 50;
+        return padding + ((x - xMin) / (xMax - xMin)) * (width - 2 * padding);
+    }
+
+    function mapY(y, height, yMin, yMax) {
+        const padding = 50;
+        return height - padding - ((y - yMin) / (yMax - yMin)) * (height - 2 * padding);
+    }
+
+    function draw() {
+        const width = canvas.width / window.devicePixelRatio;
+        const height = canvas.height / window.devicePixelRatio;
+        const currentFunc = functions[state.funcKey];
+        
+        // Clear
+        ctx.clearRect(0, 0, width, height);
+
+        const xMin = currentFunc.start;
+        const xMax = currentFunc.end;
+        const yMin = 0; 
+        const yMax = currentFunc.yMax;
+
+        // 1. Draw Grid & Axes
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        // Grid Lines
+        for(let i=0; i<=5; i++) {
+            let yVal = yMax * (i/5);
+            let yPos = mapY(yVal, height, yMin, yMax);
+            ctx.moveTo(30, yPos);
+            ctx.lineTo(width - 30, yPos);
+        }
+        ctx.stroke();
+
+        // Axes
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Y Axis
+        ctx.moveTo(mapX(xMin, width, xMin, xMax), mapY(yMin, height, yMin, yMax));
+        ctx.lineTo(mapX(xMin, width, xMin, xMax), mapY(yMax, height, yMin, yMax));
+        // X Axis
+        ctx.moveTo(mapX(xMin, width, xMin, xMax), mapY(yMin, height, yMin, yMax));
+        ctx.lineTo(mapX(xMax, width, xMin, xMax), mapY(yMin, height, yMin, yMax));
+        ctx.stroke();
+
+        // 2. Draw Price Line (If Econ)
+        if (currentFunc.price !== undefined) {
+            const pY = mapY(currentFunc.price, height, yMin, yMax);
+            const pStartX = mapX(xMin, width, xMin, xMax);
+            const pEndX = mapX(xMax + 0.5, width, xMin, xMax); // Extend slightly
+
+            ctx.beginPath();
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#334155'; // Dark Slate
+            ctx.lineWidth = 2;
+            ctx.moveTo(pStartX, pY);
+            ctx.lineTo(pEndX, pY);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset
+
+            // Label Price
+            ctx.fillStyle = '#334155';
+            ctx.font = 'bold 12px Inter';
+            ctx.fillText(`Price = ${currentFunc.price}`, pEndX - 60, pY - 8);
+        }
+
+        // 3. Draw Rectangles (Riemann Sum)
+        const dx = (xMax - xMin) / state.n;
+        let totalArea = 0;
+
+        ctx.fillStyle = currentFunc.color + '40'; // Transparent fill
+        ctx.strokeStyle = currentFunc.color;
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i < state.n; i++) {
+            let xLeft = xMin + i * dx;
+            let xRight = xLeft + dx;
+            
+            // Determine evaluation point based on method
+            let xEval;
+            if (state.method === 'left') xEval = xLeft;
+            else if (state.method === 'right') xEval = xRight;
+            else xEval = (xLeft + xRight) / 2;
+
+            let yVal = currentFunc.f(xEval);
+            
+            // Econ Logic vs Standard Logic
+            let rectBaseY, rectTopY, rectH_math;
+
+            if (currentFunc.isEcon) {
+                const price = currentFunc.price;
+                if (currentFunc.rectType === 'below_curve_above_price') {
+                    // Consumer Surplus: Height is (Curve - Price)
+                    // If curve is below price, surplus is 0 (or negative, but we usually stop)
+                    rectBaseY = price;
+                    rectTopY = yVal;
+                    rectH_math = Math.max(0, yVal - price); 
+                } else {
+                    // Producer Surplus: Height is (Price - Curve)
+                    rectBaseY = yVal;
+                    rectTopY = price;
+                    rectH_math = Math.max(0, price - yVal);
+                }
+            } else {
+                // Standard Area under curve to X-axis
+                rectBaseY = 0;
+                rectTopY = yVal;
+                rectH_math = yVal;
+            }
+
+            totalArea += rectH_math * dx;
+
+            // Drawing Coordinates
+            let drawX = mapX(xLeft, width, xMin, xMax);
+            let drawW = mapX(xRight, width, xMin, xMax) - drawX;
+            
+            let canvasY_Base = mapY(rectBaseY, height, yMin, yMax);
+            let canvasY_Top = mapY(rectTopY, height, yMin, yMax);
+            
+            // HTML5 Canvas Y grows downwards, so Top < Base numerically
+            let drawY = canvasY_Top;
+            let drawH = canvasY_Base - canvasY_Top;
+
+            // Handle cases where rect might be inverted or zero height visually
+            if (drawH < 0) {
+                 drawY = canvasY_Base;
+                 drawH = canvasY_Top - canvasY_Base;
+            }
+
+            ctx.fillRect(drawX, drawY, drawW, drawH);
+            ctx.strokeRect(drawX, drawY, drawW, drawH);
+            
+            // Draw points at the evaluation spot on the curve
+            ctx.beginPath();
+            ctx.fillStyle = currentFunc.color;
+            let dotX = mapX(xEval, width, xMin, xMax);
+            let dotY = mapY(yVal, height, yMin, yMax);
+            ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = currentFunc.color + '40'; // Reset fill
+        }
+
+        // 4. Draw The Actual Function Curve
+        ctx.strokeStyle = currentFunc.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        // Start slightly before to look smooth
+        ctx.moveTo(mapX(xMin, width, xMin, xMax), mapY(currentFunc.f(xMin), height, yMin, yMax));
+        
+        const step = (xMax - xMin) / 200;
+        // Extend slightly beyond xMax for visual completeness
+        for (let x = xMin; x <= xMax + 0.5; x += step) {
+            let yVal = currentFunc.f(x);
+            // Clamp for safety
+            if(yVal >= yMin && yVal <= yMax * 1.5) {
+                ctx.lineTo(mapX(x, width, xMin, xMax), mapY(yVal, height, yMin, yMax));
+            }
+        }
+        ctx.stroke();
+
+        // 5. Update Stats
+        const actualIntegral = currentFunc.integral(xMax) - currentFunc.integral(xMin);
+        document.getElementById('approxArea').innerText = totalArea.toFixed(4);
+        document.getElementById('exactArea').innerText = actualIntegral.toFixed(4);
+        document.getElementById('errorVal').innerText = Math.abs(actualIntegral - totalArea).toFixed(4);
+
+        // Update Legend
+        const legend = document.getElementById('legendContainer');
+        legend.innerHTML = ''; // clear
+        
+        // Curve Legend
+        const div1 = document.createElement('div');
+        div1.className = 'bg-white/90 backdrop-blur px-3 py-1 rounded-md text-xs border shadow-sm flex items-center gap-2';
+        div1.innerHTML = `<span class="w-3 h-3 rounded-full" style="background:${currentFunc.color}"></span> ${currentFunc.name}`;
+        legend.appendChild(div1);
+
+        // Price Legend (if Econ)
+        if(currentFunc.isEcon) {
+            const div2 = document.createElement('div');
+            div2.className = 'bg-white/90 backdrop-blur px-3 py-1 rounded-md text-xs border shadow-sm flex items-center gap-2';
+            div2.innerHTML = `<span class="w-3 h-1 bg-slate-700"></span> Price Line`;
+            legend.appendChild(div2);
+        }
+
+        // Show Econ note?
+        const econNote = document.getElementById('econNote');
+        if(currentFunc.isEcon) {
+            econNote.classList.remove('hidden');
+        } else {
+            econNote.classList.add('hidden');
+        }
+    }
+
+    // --- Event Listeners ---
+
+    // Function Select
+    document.getElementById('funcSelect').addEventListener('change', (e) => {
+        state.funcKey = e.target.value;
+        draw();
+    });
+
+    // Method Buttons
+    document.querySelectorAll('.method-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Update UI
+            document.querySelectorAll('.method-btn').forEach(b => {
+                b.classList.remove('bg-indigo-100', 'border-indigo-500', 'text-indigo-700', 'active-method');
+                b.classList.add('bg-white', 'border-slate-300');
+            });
+            e.target.classList.remove('bg-white', 'border-slate-300');
+            e.target.classList.add('bg-indigo-100', 'border-indigo-500', 'text-indigo-700', 'active-method');
+            
+            // Update State
+            state.method = e.target.dataset.method;
+            draw();
+        });
+    });
+
+    // Slider
+    const nSlider = document.getElementById('nSlider');
+    const nValueDisplay = document.getElementById('nValue');
+
+    nSlider.addEventListener('input', (e) => {
+        state.n = parseInt(e.target.value);
+        nValueDisplay.innerText = state.n;
+        draw();
+    });
+
+    // Animation Logic
+    const playBtn = document.getElementById('playBtn');
+    
+    playBtn.addEventListener('click', () => {
+        if (state.isAnimating) {
+            stopAnimation();
+        } else {
+            startAnimation();
+        }
+    });
+
+    function startAnimation() {
+        state.isAnimating = true;
+        playBtn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Taking Limit...
+        `;
+        playBtn.classList.replace('bg-indigo-600', 'bg-red-500');
+        playBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-red-600');
+
+        // Reset if we are already at max
+        if (state.n >= 200) {
+            state.n = 2;
+            nSlider.value = 2;
+            nValueDisplay.innerText = 2;
+        }
+
+        animate();
+    }
+
+    function stopAnimation() {
+        state.isAnimating = false;
+        cancelAnimationFrame(state.animationId);
+        playBtn.innerHTML = `
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+            </svg>
+            Take to Limit (Animate)
+        `;
+        playBtn.classList.replace('bg-red-500', 'bg-indigo-600');
+        playBtn.classList.replace('hover:bg-red-600', 'hover:bg-indigo-700');
+    }
+
+    function animate() {
+        if (!state.isAnimating) return;
+
+        // Speed curve: Move faster as n gets larger
+        let increment = 1;
+        if (state.n > 50) increment = 2;
+        if (state.n > 100) increment = 5;
+
+        state.n += increment;
+
+        if (state.n >= 200) {
+            state.n = 200;
+            draw();
+            // Update slider UI
+            nSlider.value = state.n;
+            nValueDisplay.innerText = state.n;
+            stopAnimation();
+            return;
+        }
+
+        // Update slider UI
+        nSlider.value = state.n;
+        nValueDisplay.innerText = state.n;
+        
+        draw();
+        state.animationId = requestAnimationFrame(animate);
+    }
+
+    // Initialize Active State UI
+    document.querySelector('[data-method="left"]').classList.add('bg-indigo-100', 'border-indigo-500', 'text-indigo-700', 'active-method');
+    document.querySelector('[data-method="left"]').classList.remove('bg-white', 'border-slate-300');
+
+    // Initial Draw
+    window.addEventListener('resize', resizeCanvas);
+    // Delay slightly to ensure layout is done
+    setTimeout(resizeCanvas, 100);
+
+</script>
+</body>
+</html>
