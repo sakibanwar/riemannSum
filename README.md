@@ -64,6 +64,11 @@ The tool includes both **pure mathematics functions** and **economics applicatio
 5. **Exit ticket.** After a lecture on definite integrals, use as a quick formative check: "Set $n = 3$ with right endpoints for $f(x) = 2\sqrt{x}$ on $[0, 9]$. What approximate area does the tool give? Is it an overestimate or underestimate?"
 
 
+## How to Use
+
+The easiest way to use this tool is to visit the live version at [https://sakibanwar.github.io/riemannSum/](https://sakibanwar.github.io/riemannSum/). It works in any modern browser on desktop, tablet, or mobile with no installation required. You can share this link directly with students.
+
+
 ## How to Run Locally
 
 Clone the repository and open `index.html` in any modern browser. No dependencies, no build step.
@@ -99,5 +104,4 @@ Suggestions, bug reports, and pull requests are welcome. If you use this tool in
 
 **Sakib Anwar**
 Lecturer in Economics, University of Winchester
-
 [sakibanwar.com](https://sakibanwar.com) | [GitHub](https://github.com/sakibanwar)
