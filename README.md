@@ -99,4 +99,5 @@ Suggestions, bug reports, and pull requests are welcome. If you use this tool in
 
 **Sakib Anwar**
 Lecturer in Economics, University of Winchester
+
 [sakibanwar.com](https://sakibanwar.com) | [GitHub](https://github.com/sakibanwar)
